@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const User = require('../models/auth')
+const { recordFailedAttempts, clearAttempts } = require('../middleware/bruteHelper')
 
 
 const register = async (req, res) => {
@@ -53,14 +54,19 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
     try{
-        const {email, password} = req.body
+        const {email, password} = req.body;
+        const {emailKey, ipKey} = req.bruteForce
 
 
         const user = await User.findOne({email})
 
         //kapag email na ginamit ay hindi register re return nya
         if(!user) {
-            return res.status(404).json({message: 'email is not registered'})
+            const attempts = await recordFailedAttempts(emailKey, ipKey);
+            return res.status(401).json({
+                message: 'Invalid Credentials',
+                attemptLeft: Math.max(0, 5 - attempts.emailAttempt) 
+            })
         }
 
         //password macthing sa hashed password at input password
@@ -68,8 +74,18 @@ const login = async (req, res) => {
 
         //if hindi nag match to ang re return
         if(!isMatch){
-            return res.status(401).json({message: 'invalid password credentials'})
+            const attempt = await recordFailedAttempts(emailKey, ipKey); 
+            const attemptLeft = Math.max(0, 5 - attempt.emailAttempt); //kada maling attempt nababawas ang usage to login
+
+            return res.status(401).json({
+                message: 'Invalid Credentials',
+                attemptLeft,
+                warning: attemptLeft <= 2 ? `${attemptLeft} attempt before your account locked! ` : undefined
+            })
         }
+
+        //kapag successfull ang login ma erase lahat at back to 0 ang login attempt
+        await clearAttempts(emailKey, ipKey);
 
         //token
         const token = jwt.sign(
@@ -84,7 +100,7 @@ const login = async (req, res) => {
         })
     }
     catch(err){
-        res.status(500).json({message: err.message})
+        res.status(500).json({message: err.message, data: 'error'})
 
     }
 }
