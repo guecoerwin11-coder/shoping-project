@@ -436,7 +436,7 @@ const disable2FA = async (req, res) => {
 
 
 
-//export sila para magamit at ma import
+//export sila para magamit at ma import sa ibang file
 module.exports = {
     register,
     verifyEmail,
