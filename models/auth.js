@@ -17,9 +17,9 @@ const userSchema = new mongoose.Schema({
     resetPasswordExpiry: { type: Date, default: null }, //ito yung nilalagyan ng expiration date na ginagamit for authentication
 
     //email verification
-    isVerified: { type: Boolean, dafault: null },
-    verificationtoken: { type: String, default: null },
-    verificationExpiry: { type: String, default: null },
+    isVerified: { type: Boolean, default: null },
+    verificationToken: { type: String, default: null, minlength: 0, maxlength: 100 },
+    verificationExpiry: { type: Date, default: null },
 
     //token refresh
     refreshToken: [{ type: String }],

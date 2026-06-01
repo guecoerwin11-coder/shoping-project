@@ -36,7 +36,7 @@ const register = async (req, res) => {
 
 
         const verificationToken = crypto.randomBytes(32).toString('hex')
-        const hasshedVerificationToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
+        const hashedVerificationToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
 
         //mag sa save na sa database 
         const user = await User.create(
@@ -45,11 +45,14 @@ const register = async (req, res) => {
                 email,
                 password: hash,
                 role: role || 'customer',
-                verificationToken: hasshedVerificationToken, //ito yung gagamitin sa pag verify ng email
+                verificationToken: hashedVerificationToken, //ito yung gagamitin sa pag verify ng email
                 isVerified: false, //eto yung nilalagyan ng false or true kapag di pa verified yung email
-                verificationExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000) //ito yung nilalagyan ng expiration date na ginagamit for authentication
+                verificationExpiry: Date.now() + (24 * 60 * 60 * 1000)  //ito yung nilalagyan ng expiration date na ginagamit for authentication
+
+
             }
         )
+        console.log("GENERATED EXPIRY:", new Date(Date.now() + 24 * 60 * 60 * 1000));
 
         const verficationLink = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`
         await sendVerificationEmail(user.email, user.name, verficationLink) //send a verification email to the user
@@ -77,40 +80,89 @@ const register = async (req, res) => {
 
     }
 }
-
 const verifyEmail = async (req, res) => {
     try {
-        const { token } = req.params; //ito yung gagamitin sa pag verify ng email
+        const bodyToken = req.body?.token;
+        const queryToken = req.query?.token;
+        const token = bodyToken || queryToken;
+
+        console.log("=== THUNDER CLIENT DIAGNOSTICS ===");
+        console.log("Is express.json() working? req.body is:", req.body);
+        console.log("Token extracted from Body:", bodyToken);
+        console.log("Token extracted from Query String:", queryToken);
+        console.log("Final Token String picked up:", token);
 
         if (!token) {
-            return res.status(400).json({ message: 'Token is required!' }) //kapag wala yung token to ang re return nya
+            return res.status(400).json({ message: 'Token is required!' });
         }
 
-        const hashedToken = crypto.createHash('sha256').update(token).digest('hex') //eto yung gagamitin sa pag verify ng email
+        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+        console.log("Generated SHA-256 Hash of this token:", hashedToken);
 
-        //mag s scan na sa database kung meron na ba 
-        const user = await User.findOne({
-            verificationToken: hashedToken,
-            verificationExpiry: { $gt: new Date() }
-        }); //ito yung nilalagyan ng true or false na ginagamit for authentication
+        // Debug: Find user strictly matching the token text, ignoring the expiration date block
+        const userCheck = await User.findOne({ verificationToken: hashedToken });
+        console.log("Did we find a matching token hash in the database?", userCheck ? "YES" : "NO");
 
-        //kapag ang token ay hindi mahanap at invalid to ang re return nya
-        if (!user) {
-            return res.status(401).json({ message: 'Token is invalid or expired!' })
+        if (!userCheck) {
+            return res.status(401).json({
+                message: "Database Mismatch: The token hash sent does not exist in MongoDB."
+            });
         }
 
-        user.isVerified = true; //ito yung nilalagyan ng true or false na ginagamit for authentication
-        user.verificationToken = undefined; //ito yung nilalagyan ng random characters na ginagamit for authentication
-        user.verificationExpiry = undefined; //ito yung nilalagyan ng expiration date na ginagamit for authentication
-        await user.save(); //mag sa save na to sa database
+        console.log("Database Expiry Date:", userCheck.verificationExpiry);
+        console.log("Current Server Comparison Date:", new Date());
 
-        res.status(200).json({ message: 'Email verified successfully!' })
+        if (userCheck.verificationExpiry <= new Date()) {
+            return res.status(401).json({ message: "Time Mismatch: The token is genuinely expired." });
+        }
 
-    }
-    catch (err) {
-        res.status(500).json({ message: err.message })
+        // Complete verification logic if steps pass diagnostics
+        userCheck.isVerified = true;
+        userCheck.verificationToken = undefined;
+        userCheck.verificationExpiry = undefined;
+        await userCheck.save();
+
+        return res.status(200).json({ message: 'Email verified successfully!' });
+
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
     }
 }
+
+
+// const verifyEmail = async (req, res) => {
+//     try {
+//         const token = req.body.token || req.query.token; //ito yung gagamitin sa pag verify ng email
+
+//         if (!token) {
+//             return res.status(400).json({ message: 'Token is required!' }) //kapag wala yung token to ang re return nya
+//         }
+
+//         const hashedToken = crypto.createHash('sha256').update(token).digest('hex') //eto yung gagamitin sa pag verify ng email
+
+//         //mag s scan na sa database kung meron na ba 
+//         const user = await User.findOne({
+//             verificationToken: hashedToken,
+//             verificationExpiry: { $gt: new Date() }
+//         }); //ito yung nilalagyan ng true or false na ginagamit for authentication
+
+//         //kapag ang token ay hindi mahanap at invalid to ang re return nya
+//         if (!user) {
+//             return res.status(401).json({ message: 'Token is invalid or expired!' })
+//         }
+
+//         user.isVerified = true; //ito yung nilalagyan ng true or false na ginagamit for authentication
+//         user.verificationToken = undefined; //ito yung nilalagyan ng random characters na ginagamit for authentication
+//         user.verificationExpiry = undefined; //ito yung nilalagyan ng expiration date na ginagamit for authentication
+//         await user.save(); //mag sa save na to sa database
+
+//         res.status(200).json({ message: 'Email verified successfully!' })
+
+//     }
+//     catch (err) {
+//         res.status(500).json({ message: err.message })
+//     }
+// }
 
 
 //ito yung para sa resend verification
@@ -134,7 +186,7 @@ const resendVerification = async (req, res) => {
         user.verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); //ito yung nilalagyan ng expiration date na ginagamit for authentication
         await user.save(); //mag sa save na to sa database
 
-        const verificationLink = `${process.env.FRONTEND_URL}/api/auth/verify-email?token=${verificationToken}`; //ito yung gagamitin sa pag send ng email
+        const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
         await sendVerificationEmail(user.email, user.name, verificationLink); //eto yung gagamitin sa pag send ng email
 
         res.status(200).json({ message: 'Verification email sent successfully!' })
@@ -146,7 +198,7 @@ const resendVerification = async (req, res) => {
 
 const login = async (req, res) => {
     try {
-        const { email, password } = req.body; //eto yung gagamitin sa pag login
+        const { email, password, twoFactorCode } = req.body; //eto yung gagamitin sa pag login
         const { emailKey, ipKey } = req.bruteForce //ito yung gagamitin sa pag login
 
 
