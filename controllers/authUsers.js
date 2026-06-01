@@ -14,7 +14,7 @@ const generateAccessToken = (user) => {
 
 //ito yung para sa refresh token
 const generateRefreshToken = (user) => {
-    return jwt.sign({ id: user._id, name: user.name, role: user.role }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' })
+    return jwt.sign({ id: user._id, name: user.name, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' })
 }
 
 
@@ -43,7 +43,8 @@ const register = async (req, res) => {
             {
                 name,
                 email,
-                password: hash, role: role || 'customer',
+                password: hash,
+                role: role || 'customer',
                 verificationToken: hasshedVerificationToken, //ito yung gagamitin sa pag verify ng email
                 isVerified: false, //eto yung nilalagyan ng false or true kapag di pa verified yung email
                 verificationExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000) //ito yung nilalagyan ng expiration date na ginagamit for authentication
@@ -229,7 +230,7 @@ const refreshToken = async (req, res) => {
         if (!refreshToken) { //kapag ang refreshToken ay hindi valid to ang re return nya
             return res.status(401).json({ message: 'Refresh token is required!' })
         }
-        const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET)
+        const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET)
 
         const user = await User.findById(decoded.id) //ito yung gagamitin sa pag refresh ng token
 
