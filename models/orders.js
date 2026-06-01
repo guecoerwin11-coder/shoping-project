@@ -21,6 +21,16 @@ const orderSchema = new mongoose.Schema({
     enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
     default: 'pending'
   },
+
+  // ← add these payment fields
+  paymentIntentId: { type: String, default: null },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'paid', 'failed', 'refunded'],
+    default: 'pending'
+  },
+
+
   shippingAddress: {  //shipping kung saan i hahatid
     street: { type: String, required: true },
     city: { type: String, required: true },

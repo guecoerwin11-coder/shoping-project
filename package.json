@@ -25,6 +25,7 @@
     "qrcode": "^1.5.4",
     "redis": "^5.12.1",
     "speakeasy": "^2.0.0",
+    "stripe": "^22.2.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

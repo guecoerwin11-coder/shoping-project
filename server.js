@@ -17,6 +17,12 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 
 app.use(rateLimit(5, 60))
 
+// ← webhook must be BEFORE express.json()!
+app.use('/payment/webhook',
+    express.raw({ type: 'application/json' }),
+    require('./routes/payment').webhook
+)
+
 app.use('/auth', auth)
 app.use('/carts', carts)
 app.use('/orders', orders)
