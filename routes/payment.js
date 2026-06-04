@@ -20,4 +20,4 @@ router.post(
     handleWebhook
 )
 
-module.exports = router
+module.exports = router;

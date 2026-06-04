@@ -1,7 +1,7 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
-const Order = require('../models/order')
+const Order = require('../models/orders')
 const User = require('../models/auth')
-const Cart = require('../models/cart')
+const Cart = require('../models/carts')
 const Product = require('../models/products')
 
 const createPaymentIntent = async (req, res) => {

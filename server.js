@@ -9,6 +9,7 @@ const auth = require('./routes/auth')
 const products = require('./routes/products')
 const orders = require('./routes/orders')
 const carts = require('./routes/carts')
+const payment = require('./routes/payment')
 
 database()
 app.use(cors())
@@ -18,10 +19,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 app.use(rateLimit(5, 60))
 
 // ← webhook must be BEFORE express.json()!
-app.use('/payment/webhook',
-    express.raw({ type: 'application/json' }),
-    require('./routes/payment').webhook
-)
+app.use('/payment', payment)
 
 app.use('/auth', auth)
 app.use('/carts', carts)
