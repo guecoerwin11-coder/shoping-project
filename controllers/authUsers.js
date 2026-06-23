@@ -6,16 +6,8 @@ const qrcode = require('qrcode') //ito yung mag gegenerate ng QR code
 const { recordFailedAttempts, clearAttempts } = require('../middleware/bruteHelper') //ito yung gagamitin for brute force
 const { sendVerificationEmail, sendPasswordResetEmail, } = require('../services/emailServices'); //ito yung gagamitin for email
 const crypto = require('crypto') //ito yung gagamitin for crypto
-
-//eto yung function para sa pag generate ng token
-const generateAccessToken = (user) => {
-    return jwt.sign({ id: user._id, name: user.name, role: user.role }, process.env.JWT_SECRET, { expiresIn: '15m' })
-}
-
-//ito yung para sa refresh token
-const generateRefreshToken = (user) => {
-    return jwt.sign({ id: user._id, name: user.name, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' })
-}
+const generateAccessToken = require('./tokens/accessToken')
+const generateRefreshToken = require('./tokens/generateToken')
 
 
 const register = async (req, res) => {
